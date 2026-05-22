@@ -45,7 +45,7 @@ int main(void)
     gfx_Begin();
     gfx_SetDrawBuffer();
 
-    enterState(STATE_MENU);
+    enterState(STATE_GAME);
 
     while (is_running)
     {
