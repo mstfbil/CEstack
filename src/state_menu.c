@@ -39,6 +39,7 @@ static void menu_draw(void)
     gfx_PrintString("High score: ");
     gfx_PrintUInt(high_score, 1);
 
+    printCentered("v0.0.1-indev", GFX_LCD_HEIGHT - 40);
     printCentered("made with <3 by voltie_dev", GFX_LCD_HEIGHT - 20);
 
     gfx_SwapDraw();
