@@ -5,6 +5,8 @@ static void menu_init(void)
 {
     gfx_FillScreen(0xFF);
 
+    gfx_SetTextFGColor(0x00);
+
     gfx_SetTextScale(3, 3);
     printCentered("STACK", 50);
 

@@ -2,8 +2,6 @@
 #include "state_menu.h"
 #include "state_game.h"
 
-#include <debug.h>
-
 GameState current_state;
 bool is_running = true;
 
@@ -30,7 +28,6 @@ bool keyPressed(kb_lkey_t key)
 {
     uint8_t group = (uint8_t)(key >> 8);
     uint8_t mask = (uint8_t)(key & 0xFF);
-    dbg_printf("group %i, mask %i\n", group, mask);
     return (kb_Data[group] & mask) && !(old_kb_Data[group] & mask);
 }
 
@@ -45,7 +42,7 @@ int main(void)
     gfx_Begin();
     gfx_SetDrawBuffer();
 
-    enterState(STATE_GAME);
+    enterState(STATE_MENU);
 
     while (is_running)
     {
