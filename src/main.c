@@ -40,6 +40,7 @@ void printCentered(const char *str, int y)
 int main(void)
 {
     gfx_Begin();
+    gfx_SetTextTransparentColor(0x01); // arbitrary
     gfx_SetDrawBuffer();
 
     enterState(STATE_MENU);

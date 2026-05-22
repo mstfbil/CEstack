@@ -44,6 +44,9 @@ static MoveAxis current_axis;
 static int error;
 static int move_dir;
 
+static bool exit_confirmation = false;
+static bool game_over = false;
+
 static void
 drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, uint8_t color_top, uint8_t color_left, uint8_t color_right)
 {
@@ -152,7 +155,7 @@ static void placeActiveBlock()
     int max_error = (current_axis == AXIS_X) ? base->w : base->l;
     if (abs(error) >= max_error)
     {
-        enterState(STATE_MENU);
+        game_over = true;
         return;
     }
 
@@ -220,6 +223,8 @@ static void game_init(void)
     last_time = timer_Get(1);
 
     score = 0;
+    exit_confirmation = false;
+    game_over = false;
 
     current_axis = AXIS_X;
     camera_y = -BLOCK_HEIGHT * TOWER_MAX;
@@ -236,24 +241,33 @@ static void game_init(void)
 
 static void game_step(void)
 {
-    uint32_t current_time;
+    uint32_t current_time = timer_Get(1);
 
     if (keyPressed(kb_KeyClear))
     {
-        enterState(STATE_MENU);
+        if (game_over)
+            enterState(STATE_MENU);
+        else
+            exit_confirmation = !exit_confirmation;
         return;
     }
 
     if (keyPressed(kb_KeyEnter))
     {
-        placeActiveBlock();
+        if (game_over)
+            game_init();
+        else if (exit_confirmation)
+            enterState(STATE_MENU);
+        else
+            placeActiveBlock();
         return;
     }
 
-    do
-    {
+    if (game_over || exit_confirmation)
+        return;
+
+    while (current_time - last_time < TICKS_PER_FRAME)
         current_time = timer_Get(1);
-    } while (current_time - last_time < TICKS_PER_FRAME);
     last_time = current_time;
 
     error += move_dir;
@@ -302,6 +316,20 @@ static void game_draw(void)
     gfx_SetTextXY(10, 10);
     gfx_PrintString("SCORE: ");
     gfx_PrintUInt(score, 1);
+
+    gfx_SetTextFGColor(0xFF);
+    gfx_SetTextBGColor(0x00);
+    if (game_over)
+    {
+        printCentered("GAME OVER!", 100);
+        printCentered("Press <clear> to exit", 115);
+        printCentered("Press <enter> to try again", 130);
+    }
+    else if (exit_confirmation)
+    {
+        printCentered("Press <enter> to exit", 105);
+        printCentered("Press <clear> to cancel", 120);
+    }
 
     gfx_SwapDraw();
 }
