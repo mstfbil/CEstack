@@ -5,7 +5,7 @@
 #define TICKS_PER_FRAME (32768 / 30)
 #define BLOCK_HEIGHT 20
 #define INITIAL_SIZE 40
-#define TOWER_MAX 5
+#define TOWER_MAX 6
 
 typedef enum
 {
@@ -34,6 +34,7 @@ static uint8_t hue_circle[] = {
 static uint32_t last_time;
 
 static uint32_t score;
+static uint32_t high_score;
 
 static StackBlock tower[TOWER_MAX];
 static StackBlock active_block;
@@ -46,6 +47,34 @@ static int move_dir;
 
 static bool exit_confirmation = false;
 static bool game_over = false;
+static uint8_t perfect_timer;
+
+void saveHighScore(uint32_t current_score)
+{
+    uint8_t slot;
+    slot = ti_Open(HIGH_SCORE_APPVAR_NAME, "w");
+    if (slot)
+    {
+        ti_Write(&current_score, sizeof(uint32_t), 1, slot);
+        ti_SetArchiveStatus(true, slot);
+        ti_Close(slot);
+    }
+}
+
+uint32_t loadHighScore(void)
+{
+    uint8_t slot;
+    uint32_t high_score = 0;
+
+    slot = ti_Open(HIGH_SCORE_APPVAR_NAME, "r");
+    if (slot)
+    {
+        ti_Read(&high_score, sizeof(uint32_t), 1, slot);
+        ti_Close(slot);
+    }
+
+    return high_score;
+}
 
 static void
 drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, uint8_t color_top, uint8_t color_left, uint8_t color_right)
@@ -82,7 +111,6 @@ drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, 
     gfx_SetColor(color_top);
     cur_x = p2x;
     int ty = p2y;
-    int by = p2y;
     int slice_h = 1;
 
     int limit1 = (w < l) ? w : l;
@@ -94,7 +122,6 @@ drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, 
         gfx_VertLine(cur_x + 1, ty, slice_h);
         cur_x += 2;
         ty--;
-        by++;
         slice_h += 2;
     }
 
@@ -106,7 +133,6 @@ drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, 
             gfx_VertLine(cur_x + 1, ty, slice_h);
             cur_x += 2;
             ty--;
-            by--;
         }
     }
     else if (l > w)
@@ -117,7 +143,6 @@ drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, 
             gfx_VertLine(cur_x + 1, ty, slice_h);
             cur_x += 2;
             ty++;
-            by++;
         }
     }
 
@@ -127,7 +152,6 @@ drawIsometricBlock(int wx, int wy, int wz, int w, int l, int h, int ox, int oy, 
         gfx_VertLine(cur_x + 1, ty, slice_h);
         cur_x += 2;
         ty++;
-        by--;
         slice_h -= 2;
     }
 }
@@ -156,11 +180,17 @@ static void placeActiveBlock()
     if (abs(error) >= max_error)
     {
         game_over = true;
+        if (score > high_score)
+        {
+            high_score = score;
+            saveHighScore(high_score);
+        }
         return;
     }
 
     if (abs(error) <= 2)
     {
+        perfect_timer = 20;
         error = 0;
     }
 
@@ -223,8 +253,10 @@ static void game_init(void)
     last_time = timer_Get(1);
 
     score = 0;
+    high_score = loadHighScore();
     exit_confirmation = false;
     game_over = false;
+    perfect_timer = 0;
 
     current_axis = AXIS_X;
     camera_y = -BLOCK_HEIGHT * TOWER_MAX;
@@ -270,7 +302,7 @@ static void game_step(void)
         current_time = timer_Get(1);
     last_time = current_time;
 
-    error += move_dir;
+    error += move_dir * 2;
     if (abs(error) > INITIAL_SIZE + 10)
     {
         move_dir = -move_dir;
@@ -280,6 +312,9 @@ static void game_step(void)
     {
         camera_y++;
     }
+
+    if (perfect_timer > 0)
+        perfect_timer--;
 }
 
 static void game_draw(void)
@@ -287,7 +322,8 @@ static void game_draw(void)
     uint8_t active_color_index = hue_circle[active_block.color_index];
     gfx_ZeroScreen();
 
-    int screen_base_y = 200 + camera_y;
+    int screen_base_y = 240 + camera_y;
+
     // bottom blocks
     int current_z = 0;
     for (int i = 0; i < tower_count; i++)
@@ -319,6 +355,10 @@ static void game_draw(void)
 
     gfx_SetTextFGColor(0xFF);
     gfx_SetTextBGColor(0x00);
+    if (perfect_timer > 0)
+    {
+        printCentered("PERFECT!", 120);
+    }
     if (game_over)
     {
         printCentered("GAME OVER!", 100);

@@ -1,8 +1,11 @@
 #include "common.h"
 #include "state_game.h"
 
+static uint32_t high_score;
+
 static void menu_init(void)
 {
+    high_score = loadHighScore();
 }
 
 static void menu_step(void)
@@ -32,9 +35,13 @@ static void menu_draw(void)
     printCentered("Press <enter> to start", 80);
     printCentered("Press <clear> to exit", 90);
 
+    gfx_SetTextXY(20, 120);
+    gfx_PrintString("High score: ");
+    gfx_PrintUInt(high_score, 1);
+
     printCentered("made with <3 by voltie_dev", GFX_LCD_HEIGHT - 20);
 
     gfx_SwapDraw();
 }
 
-const GameState STATE_MENU = {NULL, menu_step, menu_draw};
+const GameState STATE_MENU = {menu_init, menu_step, menu_draw};
